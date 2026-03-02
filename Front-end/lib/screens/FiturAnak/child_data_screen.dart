@@ -1440,7 +1440,7 @@ class _TanggalPilihSheetState extends State<_TanggalPilihSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // ═══ TANGGAL ══════════════════════════════════════════════
-                    _judulBagian('③ Tanggal Lahir'),
+                    _judulBagian('① Tanggal Lahir'),
                     const SizedBox(height: 8),
                     GridView.builder(
                       shrinkWrap: true,
@@ -1514,7 +1514,7 @@ class _TanggalPilihSheetState extends State<_TanggalPilihSheet> {
                     const SizedBox(height: 20),
 
                     // ═══ TAHUN ═══════════════════════════════════════════════
-                    _judulBagian('① Tahun Lahir'),
+                    _judulBagian('③ Tahun Lahir'),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
