@@ -1350,15 +1350,19 @@ class _TanggalPilihSheetState extends State<_TanggalPilihSheet> {
   // Berapa hari maksimal di bulan & tahun tertentu
   int _maxHari(int tahun, int bulan) => DateTime(tahun, bulan + 1, 0).day;
 
-  // Daftar tahun: 7 tahun ke belakang dari sekarang
+  // Daftar tahun: 10 tahun ke belakang + tahun ini (selalu update otomatis)
   List<int> get _daftarTahun {
     final sekarang = DateTime.now().year;
-    return List.generate(7, (i) => sekarang - i).reversed.toList();
+    return List.generate(11, (i) => sekarang - i).reversed.toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final maxH = _maxHari(_tahun, _bulan);
+    final now = DateTime.now();
+    final maxH = (_tahun == now.year && _bulan == now.month)
+        ? now
+              .day // Bulan ini: hanya sampai hari ini
+        : _maxHari(_tahun, _bulan);
     if (_hari > maxH) _hari = maxH;
 
     return Container(
@@ -1439,46 +1443,71 @@ class _TanggalPilihSheetState extends State<_TanggalPilihSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ═══ TANGGAL ══════════════════════════════════════════════
-                    _judulBagian('① Tanggal Lahir'),
+                    // ═══ TAHUN ═══════════════════════════════════════════════
+                    _judulBagian('① Tahun Lahir'),
                     const SizedBox(height: 8),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 7,
-                            mainAxisSpacing: 6,
-                            crossAxisSpacing: 6,
-                            childAspectRatio: 1.0,
-                          ),
-                      itemCount: maxH,
-                      itemBuilder: (_, i) {
-                        final tgl = i + 1;
-                        final dipilih = tgl == _hari;
-                        return GestureDetector(
-                          onTap: () => setState(() => _hari = tgl),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            decoration: BoxDecoration(
-                              color: dipilih ? _C.hijauDaun : _C.abuBg,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: dipilih ? _C.hijauDaun : _C.abuBorder,
+                    Container(
+                      decoration: BoxDecoration(
+                        color: _C.abuBg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _C.hijauDaun, width: 1.5),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 4,
+                      ),
+                      child: DropdownButton<int>(
+                        value: _tahun,
+                        isExpanded: true,
+                        underline: const SizedBox.shrink(),
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: _C.hijauDaun,
+                        ),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: _C.hijauDaun,
+                        ),
+                        dropdownColor: _C.putih,
+                        borderRadius: BorderRadius.circular(12),
+                        items: _daftarTahun.reversed
+                            .map(
+                              (th) => DropdownMenuItem(
+                                value: th,
+                                child: Text(
+                                  '$th${th == DateTime.now().year ? "  (tahun ini)" : ""}',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: th == _tahun
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: th == _tahun
+                                        ? _C.hijauDaun
+                                        : _C.teksUtama,
+                                  ),
+                                ),
                               ),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              '$tgl',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: dipilih ? Colors.white : _C.teksUtama,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
+                            )
+                            .toList(),
+                        onChanged: (th) {
+                          if (th == null) return;
+                          final now = DateTime.now();
+                          setState(() {
+                            _tahun = th;
+                            // Jika pindah ke tahun ini, bulan tidak boleh melebihi bulan sekarang
+                            if (_tahun == now.year && _bulan > now.month) {
+                              _bulan = now.month;
+                            }
+                            // Jika bulan+tahun = sekarang, hari tidak boleh melebihi hari ini
+                            final maxH =
+                                (_tahun == now.year && _bulan == now.month)
+                                ? now.day
+                                : _maxHari(_tahun, _bulan);
+                            _hari = _hari.clamp(1, maxH);
+                          });
+                        },
+                      ),
                     ),
 
                     const SizedBox(height: 20),
@@ -1500,37 +1529,82 @@ class _TanggalPilihSheetState extends State<_TanggalPilihSheet> {
                       itemBuilder: (_, i) {
                         final bln = i + 1;
                         final dipilih = bln == _bulan;
+                        final now = DateTime.now();
+                        // Nonaktifkan bulan masa depan jika tahun = tahun ini
+                        final nonaktif = _tahun == now.year && bln > now.month;
                         return _tombolBulan(
                           label: _namaBulan[bln],
                           dipilih: dipilih,
-                          onTap: () => setState(() {
-                            _bulan = bln;
-                            _hari = _hari.clamp(1, _maxHari(_tahun, _bulan));
-                          }),
+                          nonaktif: nonaktif,
+                          onTap: nonaktif
+                              ? null
+                              : () => setState(() {
+                                  _bulan = bln;
+                                  _hari = _hari.clamp(
+                                    1,
+                                    _maxHari(_tahun, _bulan),
+                                  );
+                                }),
                         );
                       },
                     ),
 
                     const SizedBox(height: 20),
 
-                    // ═══ TAHUN ═══════════════════════════════════════════════
-                    _judulBagian('③ Tahun Lahir'),
+                    // ═══ TANGGAL ══════════════════════════════════════════════
+                    _judulBagian('③ Tanggal Lahir'),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _daftarTahun.map((th) {
-                        final dipilih = th == _tahun;
-                        return _tombolPilih(
-                          label: '$th',
-                          dipilih: dipilih,
-                          lebar: 74,
-                          onTap: () => setState(() {
-                            _tahun = th;
-                            _hari = _hari.clamp(1, _maxHari(_tahun, _bulan));
-                          }),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 7,
+                            mainAxisSpacing: 6,
+                            crossAxisSpacing: 6,
+                            childAspectRatio: 1.0,
+                          ),
+                      itemCount: maxH,
+                      itemBuilder: (_, i) {
+                        final tgl = i + 1;
+                        final dipilih = tgl == _hari;
+                        final now = DateTime.now();
+                        // Nonaktifkan tanggal masa depan jika bulan+tahun = sekarang
+                        final nonaktifTgl =
+                            _tahun == now.year &&
+                            _bulan == now.month &&
+                            tgl > now.day;
+                        return GestureDetector(
+                          onTap: nonaktifTgl
+                              ? null
+                              : () => setState(() => _hari = tgl),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            decoration: BoxDecoration(
+                              color: nonaktifTgl
+                                  ? _C.abuBorder.withOpacity(0.4)
+                                  : (dipilih ? _C.hijauDaun : _C.abuBg),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: nonaktifTgl
+                                    ? _C.abuBorder
+                                    : (dipilih ? _C.hijauDaun : _C.abuBorder),
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '$tgl',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: nonaktifTgl
+                                    ? _C.teksAbu.withOpacity(0.4)
+                                    : (dipilih ? Colors.white : _C.teksUtama),
+                              ),
+                            ),
+                          ),
                         );
-                      }).toList(),
+                      },
                     ),
 
                     const SizedBox(height: 20),
@@ -1641,51 +1715,27 @@ class _TanggalPilihSheetState extends State<_TanggalPilihSheet> {
     );
   }
 
-  // ── Tombol persegi panjang (tahun) ──
-  Widget _tombolPilih({
-    required String label,
-    required bool dipilih,
-    required VoidCallback onTap,
-    double lebar = 60,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: lebar,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: dipilih ? _C.hijauDaun : _C.abuBg,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: dipilih ? _C.hijauDaun : _C.abuBorder),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: dipilih ? Colors.white : _C.teksUtama,
-          ),
-        ),
-      ),
-    );
-  }
-
   // ── Tombol bulan (grid 3 kolom) ──
   Widget _tombolBulan({
     required String label,
     required bool dipilih,
-    required VoidCallback onTap,
+    required bool nonaktif,
+    required VoidCallback? onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
-          color: dipilih ? _C.hijauDaun : _C.abuBg,
+          color: nonaktif
+              ? _C.abuBorder.withOpacity(0.4)
+              : (dipilih ? _C.hijauDaun : _C.abuBg),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: dipilih ? _C.hijauDaun : _C.abuBorder),
+          border: Border.all(
+            color: nonaktif
+                ? _C.abuBorder
+                : (dipilih ? _C.hijauDaun : _C.abuBorder),
+          ),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -1693,7 +1743,9 @@ class _TanggalPilihSheetState extends State<_TanggalPilihSheet> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: dipilih ? Colors.white : _C.teksUtama,
+            color: nonaktif
+                ? _C.teksAbu.withOpacity(0.4)
+                : (dipilih ? Colors.white : _C.teksUtama),
           ),
           textAlign: TextAlign.center,
         ),

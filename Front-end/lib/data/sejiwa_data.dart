@@ -207,10 +207,10 @@ class KonfirmasiTT {
 // Model DataKehamilan – data lengkap kehamilan ibu
 // ─────────────────────────────────────────────────────────────────────────────
 class DataKehamilan {
-  final String namaIbu;
+  String namaIbu;
 
   /// Hari Pertama Haid Terakhir – dasar kalkulasi usia kehamilan
-  final DateTime tanggalHPHT;
+  DateTime tanggalHPHT;
 
   /// Riwayat konfirmasi TT yang sudah dilakukan selama kehamilan ini
   final List<KonfirmasiTT> riwayatTT;
@@ -410,3 +410,22 @@ final DataKehamilan globalDataKehamilan = DataKehamilan(
     ),
   ],
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Model Data Pengguna – diisi saat registrasi
+// ─────────────────────────────────────────────────────────────────────────────
+class DataPengguna {
+  String namaLengkap;
+  String nomorHP;
+  String desa;
+
+  DataPengguna({
+    required this.namaLengkap,
+    required this.nomorHP,
+    this.desa = '',
+  });
+}
+
+/// Satu sumber kebenaran pengguna yang sedang login.
+/// Diisi saat registrasi dan dapat diperbarui kemudian.
+DataPengguna globalPengguna = DataPengguna(namaLengkap: 'Asri', nomorHP: '');

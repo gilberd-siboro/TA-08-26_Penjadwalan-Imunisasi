@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'FiturLihatJadwal/schedule_screen.dart';
 import 'FiturAnak/child_data_screen.dart';
 import 'FiturKehamilan/pregnancy_screen.dart';
+import 'login_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Konstanta warna aplikasi
@@ -219,6 +220,17 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             onPressed: () =>
                 _snackInfo('Fitur notifikasi akan segera tersedia.'),
+          ),
+        ),
+        Tooltip(
+          message: 'Keluar dari akun',
+          child: IconButton(
+            icon: const Icon(
+              Icons.logout_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
+            onPressed: _konfirmasiKeluar,
           ),
         ),
         const SizedBox(width: 4),
@@ -727,6 +739,48 @@ class _HomeScreenState extends State<HomeScreen> {
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  Future<void> _konfirmasiKeluar() async {
+    final yakin = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Keluar Akun',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text('Apakah Anda yakin ingin keluar?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: _AppColors.teksAbu),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _AppColors.hijauDaun,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Keluar'),
+          ),
+        ],
+      ),
+    );
+
+    if (yakin == true && mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (_) => false,
+      );
+    }
   }
 }
 

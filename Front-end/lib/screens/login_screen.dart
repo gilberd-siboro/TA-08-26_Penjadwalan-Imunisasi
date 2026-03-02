@@ -1,6 +1,7 @@
 // lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
-import 'home_screen.dart'; // Sesuaikan dengan struktur navigasi Anda
+import 'home_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,10 +28,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleRegister() {
-    // Navigasi ke halaman registrasi (bisa Anda buat kemudian)
-    // Navigator.push(context, MaterialPageRoute(builder: (context) => RegisterScreen()));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fitur registrasi akan tersedia segera')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const RegisterScreen()),
     );
   }
 
