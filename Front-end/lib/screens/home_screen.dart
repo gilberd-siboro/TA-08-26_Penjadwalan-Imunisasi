@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'FiturLihatJadwal/schedule_screen.dart';
 import 'FiturAnak/child_data_screen.dart';
+import 'FiturKehamilan/pregnancy_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Konstanta warna aplikasi
@@ -578,6 +579,10 @@ class _HomeScreenState extends State<HomeScreen> {
         tooltip: 'Lihat data kehamilan',
         color: const Color(0xFF6A1B9A),
         colorBg: const Color(0xFFF3E5F5),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PregnancyScreen()),
+        ),
       ),
       _MenuData(
         icon: Icons.location_on_outlined,
