@@ -4,6 +4,7 @@
 // Pendekatan: Human-Centered AI + GenderMag | Referensi: Buku KIA 2024
 
 import 'package:flutter/material.dart';
+import '../data/sejiwa_data.dart';
 import 'FiturLihatJadwal/schedule_screen.dart';
 import 'FiturAnak/child_data_screen.dart';
 import 'FiturKehamilan/pregnancy_screen.dart';
@@ -62,19 +63,45 @@ class _HomeScreenState extends State<HomeScreen> {
   // Simulasi mode offline – ubah true untuk test banner
   final bool _isOffline = false;
 
-  final JadwalItem _jadwalTerdekat = const JadwalItem(
-    namaAnak: 'Bayi Asri',
-    jenisVaksin: 'DPT tahap 3',
-    tanggal: '12 Maret 2026',
-    lokasi: 'Posyandu Mejan',
-    status: StatusJadwal.mendekati,
-    sisaHari: 5,
-  );
+  // ── Data dari single source of truth (sejiwa_data.dart) ──
+  // Nama depan pengguna yang sedang login
+  String get _namaUser => globalPengguna.namaLengkap.isNotEmpty
+      ? globalPengguna.namaLengkap.split(' ').first
+      : 'Pengguna';
 
-  final int _imunisasiSelesai = 4;
-  final int _imunisasiTotal = 8;
-  final String _namaUser = 'Asri';
-  final String _roleUser = 'Ibu'; // 'Ibu' atau 'Ayah'
+  // Label peran – langsung dari RolePengguna.label
+  String get _roleTeks => globalPengguna.role.label;
+
+  // Jumlah vaksin selesai dari anak pertama
+  int get _imunisasiSelesai => globalAnakList.isNotEmpty
+      ? globalAnakList.first.vaksinSudahDone.length
+      : 0;
+
+  // Total vaksin seluruh jadwal KIA 2024
+  int get _imunisasiTotal => kMilestoneVaksin.length;
+
+  // Jadwal item terbaru dari data anak pertama
+  JadwalItem get _jadwalTerdekat {
+    if (globalAnakList.isEmpty) {
+      return const JadwalItem(
+        namaAnak: '—',
+        jenisVaksin: 'Tambahkan data anak terlebih dahulu',
+        tanggal: '—',
+        lokasi: 'Posyandu Mejan',
+        status: StatusJadwal.aman,
+        sisaHari: 0,
+      );
+    }
+    final anak = globalAnakList.first;
+    return JadwalItem(
+      namaAnak: anak.nama,
+      jenisVaksin: hitungVaksinBerikutnya(anak),
+      tanggal: '(Dikonfirmasi kader)', // akan diisi backend Golang
+      lokasi: 'Posyandu Mejan',
+      status: StatusJadwal.mendekati,
+      sisaHari: 5,
+    );
+  }
 
   String get _greetingWaktu {
     final jam = DateTime.now().hour;
@@ -84,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Selamat malam';
   }
 
-  String get _labelRole => _roleUser == 'Ibu' ? 'Ibu' : 'Ayah';
+  String get _labelRole => _roleTeks;
 
   Color _warnaStatus(StatusJadwal s) {
     switch (s) {

@@ -3,16 +3,18 @@
 // Desa Hutabulu Mejan | Studi Kasus TA-2026
 // Referensi: Buku KIA 2024
 //
-// Prinsip GenderMag:
+// Prinsip GenderMag (Universal Interface – tidak pisah tampilan per role):
 //   • Self-efficacy  → progress bar + label "Langkah X dari 2"
-//   • Risk aversion  → konfirmasi sebelum simpan, validasi real-time
+//   • Risk aversion  → konfirmasi sebelum simpan, validasi real-time, auto-reset
 //   • Step-by-step   → 2 langkah terpisah, tidak overwhelming
-//   • Motivation     → framing positif: "lindungi ibu & bayi"
+//   • Motivasi       → framing positif: "lindungi keluarga"
+//   • Inklusif       → role selector hanya untuk data penelitian, UI sama semua
 //
 // Prinsip HCAI:
 //   • Transparansi   → chip biru jelaskan kenapa data diperlukan
-//   • Kontrol user   → pilihan status TT dengan visual jelas
-//   • Non-judgmental → tidak ada kata "wajib" yang menakutkan
+//   • Kontrol user   → toggle kehamilan opsional, tidak diasumsikan
+//   • Non-judgmental → bahasa empatik, tidak menggurui
+//   • HPHT+TT muncul hanya jika pengguna mengaktifkan toggle kehamilan
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -50,7 +52,6 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey1 = GlobalKey<FormState>();
-  final _formKey2 = GlobalKey<FormState>();
 
   // Step 1 – controllers
   final _namaCtrl = TextEditingController();
@@ -59,8 +60,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _konfirmasiSandiCtrl = TextEditingController();
   bool _lihatSandi = false;
   bool _lihatKonfirmasi = false;
+  RolePengguna _role = RolePengguna.ibu; // GenderMag: identitas peran
 
-  // Step 2 – data kehamilan
+  // Step 2 – data tambahan
+  bool _adaKehamilan = false; // toggle universal: apakah ada yang hamil?
   DateTime? _hpht;
   StatusTT _statusTTAwal = StatusTT.belum;
 
@@ -119,7 +122,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   // ── Simpan registrasi ──
   void _simpan() {
-    if (_hpht == null) {
+    // HPHT wajib hanya jika toggle kehamilan aktif
+    if (_adaKehamilan && _hpht == null) {
       _snack('Harap pilih Hari Pertama Haid Terakhir (HPHT).', isError: true);
       return;
     }
@@ -129,33 +133,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // Perbarui data pengguna global
       globalPengguna
         ..namaLengkap = _namaCtrl.text.trim()
-        ..nomorHP = _hpCtrl.text.trim();
+        ..nomorHP = _hpCtrl.text.trim()
+        ..role = _role;
 
-      // Perbarui data kehamilan global berdasarkan input registrasi
+      // Perbarui data kehamilan global – hanya jika toggle kehamilan aktif
       globalDataKehamilan.namaIbu = _namaCtrl.text.trim().split(' ').first;
-      globalDataKehamilan.tanggalHPHT = _hpht!;
-      globalDataKehamilan.riwayatTT.clear();
+      if (_adaKehamilan && _hpht != null) {
+        globalDataKehamilan.tanggalHPHT = _hpht!;
+        globalDataKehamilan.riwayatTT.clear();
 
-      if (_statusTTAwal == StatusTT.sudah1x) {
-        // Tambahkan 1 entri konfirmasi TT (tanggal approx: 4 minggu lalu)
-        globalDataKehamilan.riwayatTT.add(
-          KonfirmasiTT(
-            tanggal: DateTime.now().subtract(const Duration(days: 28)),
-            keterangan: 'Imunisasi Tetanus ke-1 (dicatat saat registrasi)',
-          ),
-        );
-      } else if (_statusTTAwal == StatusTT.lengkap) {
-        // Tambahkan 2 entri konfirmasi TT
-        globalDataKehamilan.riwayatTT.addAll([
-          KonfirmasiTT(
-            tanggal: DateTime.now().subtract(const Duration(days: 56)),
-            keterangan: 'Imunisasi Tetanus ke-1 (dicatat saat registrasi)',
-          ),
-          KonfirmasiTT(
-            tanggal: DateTime.now().subtract(const Duration(days: 28)),
-            keterangan: 'Imunisasi Tetanus ke-2 (dicatat saat registrasi)',
-          ),
-        ]);
+        if (_statusTTAwal == StatusTT.sudah1x) {
+          globalDataKehamilan.riwayatTT.add(
+            KonfirmasiTT(
+              tanggal: DateTime.now().subtract(const Duration(days: 28)),
+              keterangan: 'Imunisasi Tetanus ke-1 (dicatat saat registrasi)',
+            ),
+          );
+        } else if (_statusTTAwal == StatusTT.lengkap) {
+          globalDataKehamilan.riwayatTT.addAll([
+            KonfirmasiTT(
+              tanggal: DateTime.now().subtract(const Duration(days: 56)),
+              keterangan: 'Imunisasi Tetanus ke-1 (dicatat saat registrasi)',
+            ),
+            KonfirmasiTT(
+              tanggal: DateTime.now().subtract(const Duration(days: 28)),
+              keterangan: 'Imunisasi Tetanus ke-2 (dicatat saat registrasi)',
+            ),
+          ]);
+        }
       }
 
       // Navigasi ke HomeScreen
@@ -202,7 +207,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Text(
               _step == 1
                   ? 'Langkah 1 dari 2 – Informasi Akun'
-                  : 'Langkah 2 dari 2 – Data Kehamilan',
+                  : 'Langkah 2 dari 2 – Data Tambahan',
               style: const TextStyle(fontSize: 11, color: Colors.white70),
             ),
           ],
@@ -295,6 +300,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
               return null;
             },
           ),
+          const SizedBox(height: 20),
+
+          // ── Peran dalam keluarga – GenderMag role tagging ──
+          _labelField('Peran dalam Keluarga', wajib: false),
+          const SizedBox(height: 6),
+          _buildChipHCAI(
+            'Pilihan peran hanya digunakan untuk keperluan data penelitian. '
+            'Semua pengguna mendapatkan tampilan dan fitur yang sama.',
+          ),
+          const SizedBox(height: 12),
+          _buildPilihRole(),
           const SizedBox(height: 20),
 
           // Kata sandi
@@ -410,7 +426,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   // ─────────────────────────────────────
-  // STEP 2 – DATA KEHAMILAN
+  // STEP 2 – DATA TAMBAHAN (Universal)
   // ─────────────────────────────────────
   Widget _buildStep2() {
     return Column(
@@ -420,118 +436,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _buildRingkasanAkun(),
         const SizedBox(height: 16),
 
-        // Header banner
+        // Header banner – universal untuk semua peran
         _buildBanner(
-          ikon: Icons.pregnant_woman_outlined,
-          judul: 'Data Kehamilan',
-          sub: 'Membantu kami menyesuaikan informasi imunisasi untuk Anda',
+          ikon: Icons.family_restroom_outlined,
+          judul: 'Data Tambahan',
+          sub: 'Opsional – dapat diperbarui kapan saja di dalam aplikasi',
         ),
         const SizedBox(height: 20),
 
-        // HCAI chip
+        // HCAI chip – universal
         _buildChipHCAI(
-          'Data kehamilan bersumber dari Buku KIA 2024. '
-          'Informasi ini membantu menampilkan jadwal imunisasi tetanus '
-          'yang tepat untuk Anda.',
+          'Informasi ini membantu sistem menampilkan jadwal imunisasi '
+          'yang sesuai. Semua field di langkah ini bersifat opsional '
+          'dan dapat diisi atau diubah kapan saja.',
         ),
         const SizedBox(height: 24),
 
-        // ── HPHT ──
-        _labelField('Hari Pertama Haid Terakhir (HPHT)', wajib: true),
-        const SizedBox(height: 6),
-        const Text(
-          'HPHT digunakan untuk menghitung usia kehamilan dan taksiran lahir.',
-          style: TextStyle(fontSize: 12, color: _C.teksAbu, height: 1.4),
-        ),
-        const SizedBox(height: 10),
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: _pilihHPHT,
-            borderRadius: BorderRadius.circular(12),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-              decoration: BoxDecoration(
-                color: _hpht == null ? _C.abuBg : _C.hijauPucat,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _hpht == null ? _C.abuBorder : _C.hijauDaun,
-                  width: _hpht == null ? 1.0 : 2.0,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: _hpht == null ? _C.abuBorder : _C.hijauDaun,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      _hpht == null
-                          ? Icons.calendar_month_outlined
-                          : Icons.event_available,
-                      color: _hpht == null ? _C.teksAbu : Colors.white,
-                      size: 18,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _hpht == null
-                              ? 'Pilih tanggal HPHT'
-                              : _fmtTanggal(_hpht!),
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: _hpht == null
-                                ? FontWeight.normal
-                                : FontWeight.bold,
-                            color: _hpht == null ? _C.teksAbu : _C.hijauDaun,
-                          ),
-                        ),
-                        if (_hpht == null)
-                          const Text(
-                            'Ketuk di sini untuk memilih',
-                            style: TextStyle(fontSize: 12, color: _C.teksAbu),
-                          ),
-                        if (_hpht != null)
-                          Text(
-                            'Usia kehamilan: ${_hitungUsia(_hpht!)}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: _C.hijauDaun,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: _hpht == null ? _C.teksAbu : _C.hijauDaun,
-                    size: 16,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+        // ── Toggle kehamilan – universal, tidak diasumsikan siapa yang hamil ──
+        _buildToggleKehamilan(),
+        const SizedBox(height: 16),
 
-        const SizedBox(height: 28),
-
-        // ── Status TT saat ini ──
-        _labelField('Status Imunisasi Tetanus (TT) Saat Ini', wajib: false),
-        const SizedBox(height: 6),
-        const Text(
-          'Pilih status imunisasi tetanus yang sudah Anda terima. '
-          'Anda dapat memperbarui ini kapan saja di fitur Imunisasi.',
-          style: TextStyle(fontSize: 12, color: _C.teksAbu, height: 1.4),
-        ),
-        const SizedBox(height: 12),
-        _buildPilihStatusTT(),
+        // ── Section HPHT + TT – hanya muncul jika toggle aktif ──
+        if (_adaKehamilan) ..._buildSeksiKehamilan(),
 
         const SizedBox(height: 32),
 
@@ -591,6 +517,281 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         const SizedBox(height: 32),
       ],
+    );
+  }
+
+  // ── Toggle kehamilan – universal (tidak diasumsikan siapa yang hamil) ──
+  Widget _buildToggleKehamilan() {
+    return GestureDetector(
+      onTap: () => setState(() {
+        _adaKehamilan = !_adaKehamilan;
+        if (!_adaKehamilan) {
+          _hpht = null;
+          _statusTTAwal = StatusTT.belum;
+        }
+      }),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _adaKehamilan ? _C.hijauPucat : _C.putih,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: _adaKehamilan ? _C.hijauDaun : _C.abuBorder,
+            width: _adaKehamilan ? 2.0 : 1.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                _adaKehamilan
+                    ? Icons.pregnant_woman
+                    : Icons.pregnant_woman_outlined,
+                key: ValueKey(_adaKehamilan),
+                color: _adaKehamilan ? _C.hijauDaun : _C.teksAbu,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Ada anggota keluarga yang sedang hamil?',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: _adaKehamilan ? _C.hijauDaun : _C.teksUtama,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _adaKehamilan
+                        ? 'Aktif – isi data kehamilan di bawah'
+                        : 'Ketuk untuk mengaktifkan',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _adaKehamilan
+                          ? _C.hijauDaun.withOpacity(0.75)
+                          : _C.teksAbu,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: _adaKehamilan,
+              onChanged: (val) => setState(() {
+                _adaKehamilan = val;
+                if (!val) {
+                  _hpht = null;
+                  _statusTTAwal = StatusTT.belum;
+                }
+              }),
+              activeThumbColor: _C.hijauDaun,
+              activeTrackColor: _C.hijauPucat,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Seksi HPHT + TT – ditampilkan hanya jika _adaKehamilan == true ──
+  List<Widget> _buildSeksiKehamilan() {
+    return [
+      Container(
+        decoration: BoxDecoration(
+          color: _C.hijauPucat,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _C.hijauDaun.withOpacity(0.3)),
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Sub-header
+            Row(
+              children: const [
+                Icon(Icons.info_outline, size: 16, color: _C.hijauDaun),
+                SizedBox(width: 6),
+                Text(
+                  'Data Kehamilan – Referensi Buku KIA 2024',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: _C.hijauDaun,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 18, color: Color(0xFFA5D6A7)),
+
+            // HPHT
+            _labelField('Hari Pertama Haid Terakhir (HPHT)', wajib: true),
+            const SizedBox(height: 4),
+            const Text(
+              'Digunakan untuk menghitung usia kehamilan dan taksiran lahir.',
+              style: TextStyle(fontSize: 12, color: _C.teksAbu, height: 1.4),
+            ),
+            const SizedBox(height: 10),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _pilihHPHT,
+                borderRadius: BorderRadius.circular(12),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _hpht == null ? Colors.white : _C.hijauPucat,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _hpht == null ? _C.abuBorder : _C.hijauDaun,
+                      width: _hpht == null ? 1.0 : 2.0,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: _hpht == null ? _C.abuBorder : _C.hijauDaun,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _hpht == null
+                              ? Icons.calendar_month_outlined
+                              : Icons.event_available,
+                          color: _hpht == null ? _C.teksAbu : Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _hpht == null
+                                  ? 'Pilih tanggal HPHT'
+                                  : _fmtTanggal(_hpht!),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: _hpht == null
+                                    ? FontWeight.normal
+                                    : FontWeight.bold,
+                                color: _hpht == null
+                                    ? _C.teksAbu
+                                    : _C.hijauDaun,
+                              ),
+                            ),
+                            if (_hpht == null)
+                              const Text(
+                                'Ketuk di sini untuk memilih',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: _C.teksAbu,
+                                ),
+                              ),
+                            if (_hpht != null)
+                              Text(
+                                'Usia kehamilan: ${_hitungUsia(_hpht!)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: _C.hijauDaun,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: _hpht == null ? _C.teksAbu : _C.hijauDaun,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Status TT
+            _labelField('Status Imunisasi Tetanus (TT) Saat Ini', wajib: false),
+            const SizedBox(height: 4),
+            const Text(
+              'Dapat diperbarui kapan saja di fitur Imunisasi.',
+              style: TextStyle(fontSize: 12, color: _C.teksAbu, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            _buildPilihStatusTT(),
+          ],
+        ),
+      ),
+      const SizedBox(height: 8),
+    ];
+  }
+
+  // ── Widget pilih peran – GenderMag chip selector ──
+  Widget _buildPilihRole() {
+    final opsi = [
+      (role: RolePengguna.ibu, ikon: Icons.woman_outlined, label: 'Ibu'),
+      (role: RolePengguna.ayah, ikon: Icons.man_outlined, label: 'Ayah'),
+      (
+        role: RolePengguna.wali,
+        ikon: Icons.supervisor_account_outlined,
+        label: 'Wali',
+      ),
+      (
+        role: RolePengguna.kakekNenek,
+        ikon: Icons.elderly_outlined,
+        label: 'Kakek/Nenek',
+      ),
+    ];
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: opsi.map((o) {
+        final dipilih = _role == o.role;
+        return GestureDetector(
+          onTap: () => setState(() => _role = o.role),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: dipilih ? _C.hijauDaun : _C.putih,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: dipilih ? _C.hijauDaun : _C.abuBorder,
+                width: dipilih ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(o.ikon, size: 18, color: dipilih ? _C.putih : _C.teksAbu),
+                const SizedBox(width: 6),
+                Text(
+                  o.label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: dipilih ? FontWeight.bold : FontWeight.normal,
+                    color: dipilih ? _C.putih : _C.teksUtama,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -1006,16 +1207,6 @@ class _HPHTPickerSheetState extends State<_HPHTPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final maxH = () {
-      // Hitung max hari yang valid di bulan ini
-      final maxFull = _maxHari(_tahun, _bulan);
-      int last = 0;
-      for (int d = 1; d <= maxFull; d++) {
-        if (!_tglNonaktif(d)) last = d;
-      }
-      return maxFull; // tampilkan semua, tapi nonaktifkan yang tidak valid
-    }();
-
     return Container(
       decoration: const BoxDecoration(
         color: _C.putih,

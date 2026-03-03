@@ -10,6 +10,29 @@
 enum JenisKelamin { lakilaki, perempuan }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Enum Peran Pengguna – digunakan untuk analisis GenderMag
+// Tidak membatasi akses, hanya menyesuaikan tampilan & pengingat
+// ─────────────────────────────────────────────────────────────────────────────
+enum RolePengguna { ibu, ayah, wali, kakekNenek, anggotaKeluarga }
+
+extension RolePenggunaExt on RolePengguna {
+  String get label {
+    switch (this) {
+      case RolePengguna.ibu:
+        return 'Ibu';
+      case RolePengguna.ayah:
+        return 'Ayah';
+      case RolePengguna.wali:
+        return 'Wali';
+      case RolePengguna.kakekNenek:
+        return 'Kakek/Nenek';
+      case RolePengguna.anggotaKeluarga:
+        return 'Anggota Keluarga';
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Model DataAnak
 // ─────────────────────────────────────────────────────────────────────────────
 class DataAnak {
@@ -419,10 +442,14 @@ class DataPengguna {
   String nomorHP;
   String desa;
 
+  /// Peran dalam keluarga – untuk analisis GenderMag
+  RolePengguna role;
+
   DataPengguna({
     required this.namaLengkap,
     required this.nomorHP,
     this.desa = '',
+    this.role = RolePengguna.ibu,
   });
 }
 

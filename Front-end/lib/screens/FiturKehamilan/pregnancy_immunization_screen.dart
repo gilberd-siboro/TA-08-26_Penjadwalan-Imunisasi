@@ -30,14 +30,11 @@ class _C {
   static const biruTeks = Color(0xFF1565C0);
   static const kuning = Color(0xFFF9A825);
   static const kuningPucat = Color(0xFFFFF8E1);
-  static const merahBg = Color(0xFFFBE9E7);
-  static const merah = Color(0xFFBF360C);
   static const putih = Color(0xFFFFFFFF);
   static const abuBg = Color(0xFFF5F5F5);
   static const abuBorder = Color(0xFFE0E0E0);
   static const teksUtama = Color(0xFF212121);
   static const teksAbu = Color(0xFF757575);
-  static const hijauGelap = Color(0xFF1B5E20);
   static const kuningGelap = Color(0xFF7B5800);
 }
 

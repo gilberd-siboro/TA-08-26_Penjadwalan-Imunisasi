@@ -24,7 +24,6 @@ class _C {
   static const kuningPucat = Color(0xFFFFF8E1);
   static const putih = Color(0xFFFFFFFF);
   static const abuBg = Color(0xFFF5F5F5);
-  static const abuBorder = Color(0xFFE0E0E0);
   static const teksUtama = Color(0xFF212121);
   static const teksAbu = Color(0xFF757575);
 }
@@ -710,15 +709,4 @@ class _PregnancyScreenState extends State<PregnancyScreen> {
   // ─────────────────────────────────────
   // HELPER
   // ─────────────────────────────────────
-  void _snack(String pesan) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(pesan, style: const TextStyle(fontSize: 14)),
-        backgroundColor: _C.hijauDaun,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
 }
