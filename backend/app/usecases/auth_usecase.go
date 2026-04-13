@@ -130,6 +130,7 @@ func (m *Main) buildAccessToken(user *models.User, destination roleDestination) 
 	claims := models.AuthClaims{
 		UserID:        user.ID,
 		Email:         user.Email,
+		PhoneNumber:   user.PhoneNumber,
 		Role:          user.Role.Name,
 		TargetApp:     destination.TargetApp,
 		RedirectRoute: destination.RedirectRoute,
@@ -197,6 +198,7 @@ func (m *Main) Register(req *models.RegisterRequest) error {
 
 	user := &models.User{
 		Email:       req.Email,
+		PhoneNumber: req.PhoneNumber,
 		Password:    string(hashedPassword),
 		RoleID:      role.ID,
 	}
@@ -267,6 +269,7 @@ func (m *Main) Login(req *models.LoginRequest) (*models.LoginResponse, error) {
 		ExpiresIn:     expiresIn,
 		UserID:        user.ID,
 		Email:         user.Email,
+		PhoneNumber:   user.PhoneNumber,
 		Role:          user.Role.Name,
 		TargetApp:     destination.TargetApp,
 		RedirectRoute: destination.RedirectRoute,
