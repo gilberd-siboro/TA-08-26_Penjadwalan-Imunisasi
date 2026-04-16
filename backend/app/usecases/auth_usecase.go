@@ -263,6 +263,7 @@ func (m *Main) Login(req *models.LoginRequest) (*models.LoginResponse, error) {
 		return nil, customerror.NewInternalServiceError("gagal membuat access token")
 	}
 
+
 	res := &models.LoginResponse{
 		AccessToken:   accessToken,
 		TokenType:     "Bearer",
