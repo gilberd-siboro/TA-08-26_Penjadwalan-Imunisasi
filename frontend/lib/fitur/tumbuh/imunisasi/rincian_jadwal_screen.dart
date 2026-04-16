@@ -34,6 +34,8 @@ class RincianJadwalScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeaderCard(),
+            const SizedBox(height: 10),
+            _buildStepInfoCard(),
             const SizedBox(height: 12),
             _buildInfoCard(
               title: 'WAKTU PELAKSANAAN',
@@ -74,7 +76,7 @@ class RincianJadwalScreen extends StatelessWidget {
         ),
       ),
       title: const Text(
-        'Rincian Jadwal',
+        'Langkah 2 dari 3',
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w700,
@@ -166,6 +168,22 @@ class RincianJadwalScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStepInfoCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F7FF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFD9EAFE)),
+      ),
+      child: const Text(
+        'Kamu sedang di langkah 2. Cek waktu, lokasi, dan persiapan dulu, lalu lanjut pilih tanggal.',
+        style: TextStyle(fontSize: 12, height: 1.5, color: Color(0xFF315B7A)),
       ),
     );
   }
@@ -372,52 +390,29 @@ class RincianJadwalScreen extends StatelessWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const UbahJadwalScreen(),
-                      ),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _primaryColor,
-                    side: const BorderSide(color: _primaryColor),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text(
-                    'Ubah Jadwal',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const UbahJadwalScreen()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primaryColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _primaryColor,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text(
-                    'Tandai Selesai',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                ),
+              child: const Text(
+                'Lanjut Pilih Tanggal',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
               ),
-            ],
+            ),
           ),
         ),
       ),

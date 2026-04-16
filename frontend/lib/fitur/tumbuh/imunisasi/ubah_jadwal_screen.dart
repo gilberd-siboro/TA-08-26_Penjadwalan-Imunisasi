@@ -9,6 +9,7 @@ class UbahJadwalScreen extends StatefulWidget {
 }
 
 class _UbahJadwalScreenState extends State<UbahJadwalScreen> {
+  bool _isAgree = false;
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   final TextEditingController _lokasiController = TextEditingController(
@@ -101,8 +102,31 @@ class _UbahJadwalScreenState extends State<UbahJadwalScreen> {
 
   // ──────────────────────────────────────────────
   // Simpan
+  Future<bool> _showConfirmDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Konfirmasi Jadwal'),
+        content: const Text(
+          'Apakah Anda yakin jadwal ini sudah benar?\nAnda tetap bisa mengubah lagi nanti.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Periksa Lagi'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Ya, Simpan'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   // ──────────────────────────────────────────────
-  void _simpan() {
+  void _simpan() async {
     if (_selectedDate == null) {
       _showSnack('Pilih tanggal terlebih dahulu');
       return;
@@ -111,6 +135,14 @@ class _UbahJadwalScreenState extends State<UbahJadwalScreen> {
       _showSnack('Pilih waktu terlebih dahulu');
       return;
     }
+
+    if (!_isAgree) {
+      _showSnack('Centang persetujuan dulu agar tidak salah simpan');
+      return;
+    }
+
+    final confirm = await _showConfirmDialog();
+    if (!confirm) return;
 
     final endHour = ((_selectedTime!.hour + 1) % 24).toString().padLeft(2, '0');
     final endMinute = _selectedTime!.minute.toString().padLeft(2, '0');
@@ -192,9 +224,10 @@ class _UbahJadwalScreenState extends State<UbahJadwalScreen> {
             _buildLokasiField(),
             const SizedBox(height: 16),
             _buildAlasanField(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 12),
+            _buildAgreeField(),
+            const SizedBox(height: 24),
             _buildSimpanButton(),
-            const SizedBox(height: 30),
           ],
         ),
       ),
@@ -468,6 +501,31 @@ class _UbahJadwalScreenState extends State<UbahJadwalScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  // ──────────────────────────────────────────────
+  // Field — Persetujuan
+  // ──────────────────────────────────────────────
+  Widget _buildAgreeField() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: CheckboxListTile(
+        value: _isAgree,
+        onChanged: (v) => setState(() => _isAgree = v ?? false),
+        controlAffinity: ListTileControlAffinity.leading,
+        contentPadding: EdgeInsets.zero,
+        title: const Text(
+          'Saya sudah mengecek tanggal dan lokasi.',
+          style: TextStyle(fontSize: 12.5, color: Color(0xFF2D3748)),
+        ),
+      ),
     );
   }
 

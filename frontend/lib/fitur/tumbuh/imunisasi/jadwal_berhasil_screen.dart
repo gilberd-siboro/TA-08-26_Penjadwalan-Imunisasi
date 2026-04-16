@@ -71,7 +71,7 @@ class _JadwalBerhasilScreenState extends State<JadwalBerhasilScreen>
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Jadwal imunisasi ${widget.namaPasien.split(' ').first} telah berhasil\nditambahkan ke kalender Anda.',
+                  'Jadwal imunisasi sudah tersimpan.\nKami akan mengingatkan Anda sebelum hari kunjungan.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 13,
