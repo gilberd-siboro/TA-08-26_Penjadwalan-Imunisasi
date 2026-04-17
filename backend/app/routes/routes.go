@@ -7,16 +7,13 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func ConfigureRouter(e *echo.Echo, controller *controllers.Main) {
-	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(200, map[string]string{"status": "ok"})
-	})
+func ConfigureRouter(e *echo.Echo, c *controllers.Main) {
+	// Public endpoint
+	e.POST("/login", c.Login)
+	e.GET("/profile/keluarga", c.ProfileKeluarga, middlewares.JWTAuth(c.JWTSecret()))
 
-	auth := e.Group("/auth")
-	auth.POST("/register", controller.Register)
-	auth.POST("/login", controller.Login)
-
-	secured := auth.Group("")
-	secured.Use(middlewares.JWTAuth(controller.JWTSecret()))
-	secured.GET("/me", controller.Me)
+	// Protected endpoint (wajib JWT)
+	e.POST("/keluarga/anak", c.KeluargaCreateAnak, middlewares.JWTAuth(c.JWTSecret()))
+	adminGroup := e.Group("/admin", middlewares.JWTAuth(c.JWTSecret()))
+	adminGroup.POST("/keluarga-lengkap", c.AdminCreateKeluargaLengkap)
 }

@@ -2,7 +2,6 @@ package app
 
 import (
 	"monitoring-service/app/controllers"
-	"monitoring-service/app/models"
 	"monitoring-service/app/repositories"
 	"monitoring-service/app/routes"
 	"monitoring-service/app/usecases"
@@ -50,11 +49,6 @@ func (m *Main) Init() (err error) {
 
 	m.database.Postgres, err = database.GetConnection(m.cfg.Postgres().Read.ToArgs(database.Postgres, database.ReadConn, nil))
 
-	if err != nil {
-		return
-	}
-
-	err = models.AutoMigrateAndSeed(m.database.Postgres)
 	if err != nil {
 		return
 	}
