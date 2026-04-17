@@ -182,29 +182,71 @@ Body contoh:
       "nomor_telepon": "081299991111",
       "nama_lengkap": "Ayah Contoh",
       "jenis_kelamin": "Laki-laki",
+      "tanggal_lahir": "1990-01-10T00:00:00Z",
+      "tempat_lahir": "Medan",
+      "golongan_darah": "O",
+      "agama": "Islam",
+      "status_perkawinan": "Kawin",
+      "pendidikan_terakhir": "SMA",
+      "pekerjaan": "Petani",
+      "baca_huruf": true,
       "kedudukan_keluarga": "Kepala Keluarga",
-      "dusun": "Dusun A"
+      "dusun": "Dusun A",
+      "tanggal_penambahan": "2026-04-17T00:00:00Z",
+      "asal_penduduk": "Lahir di desa",
+      "keterangan": "Data kepala keluarga"
     },
     {
       "nik": "{{test_nik_ibu}}",
       "nomor_telepon": "081277770000",
       "nama_lengkap": "Ibu Contoh",
       "jenis_kelamin": "Perempuan",
+      "tanggal_lahir": "1993-05-05T00:00:00Z",
+      "tempat_lahir": "Medan",
+      "golongan_darah": "A",
+      "agama": "Islam",
+      "status_perkawinan": "Kawin",
+      "pendidikan_terakhir": "SMA",
+      "pekerjaan": "Ibu Rumah Tangga",
+      "baca_huruf": true,
       "kedudukan_keluarga": "Ibu",
-      "dusun": "Dusun A"
+      "dusun": "Dusun A",
+      "tanggal_penambahan": "2026-04-17T00:00:00Z",
+      "asal_penduduk": "Lahir di desa",
+      "keterangan": "Data ibu keluarga"
     },
     {
       "nik": "{{test_nik_anak1}}",
-      "nomor_telepon": "081233334444",
+      "nomor_telepon": "",
       "nama_lengkap": "Anak Contoh",
       "jenis_kelamin": "Laki-laki",
+      "tanggal_lahir": "2018-01-01T00:00:00Z",
+      "tempat_lahir": "Medan",
+      "golongan_darah": "B",
+      "agama": "Islam",
+      "status_perkawinan": "Belum Kawin",
+      "pendidikan_terakhir": "TK",
+      "pekerjaan": "Pelajar",
+      "baca_huruf": true,
       "kedudukan_keluarga": "Anak",
       "nik_ibu": "{{test_nik_ibu}}",
-      "dusun": "Dusun A"
+      "dusun": "Dusun A",
+      "tanggal_penambahan": "2026-04-17T00:00:00Z",
+      "asal_penduduk": "Lahir di desa",
+      "keterangan": "Data anak keluarga"
     }
   ]
 }
 ```
+
+Catatan wajib untuk setiap item `anggota`:
+
+1. Wajib isi field inti penduduk: `nik`, `nama_lengkap`, `jenis_kelamin`, `tanggal_lahir`, `tempat_lahir`, `golongan_darah`, `agama`, `status_perkawinan`, `pendidikan_terakhir`, `pekerjaan`, `baca_huruf`, `kedudukan_keluarga`, `dusun`, `tanggal_penambahan`, `asal_penduduk`, `keterangan`.
+2. Field `nomor_telepon`:
+  1. Wajib untuk anggota selain `Anak`.
+  2. Boleh kosong untuk anggota dengan `kedudukan_keluarga = Anak`.
+  3. Jika diisi, wajib format Indonesia: diawali `08`, total 10-12 digit.
+3. `jenis_kelamin` hanya menerima `Laki-laki` atau `Perempuan`.
 
 Expected:
 
@@ -417,7 +459,9 @@ pm.test("Response tambah anak valid", function () {
 7. `anggota` kosong -> `400`
 8. NIK duplikat di payload -> `400`
 9. Nomor telepon pemilik akun sudah dipakai -> `409`
-10. Nomor telepon anggota tidak diawali 08 atau panjang bukan 10-12 digit -> `400`
+10. Nomor telepon anggota tidak diawali 08 atau panjang bukan 10-12 digit (jika nomor diisi) -> `400`
+11. Nomor telepon anggota kosong untuk kedudukan selain `Anak` -> `400`
+12. Field inti penduduk ada yang kosong (misal `tanggal_lahir`, `tempat_lahir`, `agama`, `baca_huruf`, `asal_penduduk`) -> `400`
 
 ## 6.3 Endpoint profile
 

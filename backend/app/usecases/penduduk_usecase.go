@@ -19,20 +19,72 @@ func validatePendudukCoreFields(req models.AdminCreatePendudukRequest) error {
 	if strings.TrimSpace(req.NIK) == "" {
 		return errors.New("nik wajib diisi")
 	}
-	if strings.TrimSpace(req.NomorTelepon) == "" {
-		return errors.New("nomor_telepon wajib diisi")
-	}
-	if err := validateNomorTeleponIndonesia(req.NomorTelepon); err != nil {
-		return err
-	}
 	if strings.TrimSpace(req.NamaLengkap) == "" {
 		return errors.New("nama_lengkap wajib diisi")
 	}
 	if strings.TrimSpace(req.JenisKelamin) == "" {
 		return errors.New("jenis_kelamin wajib diisi")
 	}
+	jenisKelamin := strings.ToLower(strings.TrimSpace(req.JenisKelamin))
+	if jenisKelamin != "laki-laki" && jenisKelamin != "perempuan" {
+		return errors.New("jenis_kelamin tidak valid, gunakan 'Laki-laki' atau 'Perempuan'")
+	}
+	if req.TanggalLahir == nil {
+		return errors.New("tanggal_lahir wajib diisi")
+	}
+	if strings.TrimSpace(req.TempatLahir) == "" {
+		return errors.New("tempat_lahir wajib diisi")
+	}
+	if strings.TrimSpace(req.GolonganDarah) == "" {
+		return errors.New("golongan_darah wajib diisi")
+	}
+	if strings.TrimSpace(req.Agama) == "" {
+		return errors.New("agama wajib diisi")
+	}
+	if strings.TrimSpace(req.StatusPerkawinan) == "" {
+		return errors.New("status_perkawinan wajib diisi")
+	}
+	if strings.TrimSpace(req.PendidikanTerakhir) == "" {
+		return errors.New("pendidikan_terakhir wajib diisi")
+	}
+	if strings.TrimSpace(req.Pekerjaan) == "" {
+		return errors.New("pekerjaan wajib diisi")
+	}
+	if req.BacaHuruf == nil {
+		return errors.New("baca_huruf wajib diisi")
+	}
 	if strings.TrimSpace(req.KedudukanKeluarga) == "" {
 		return errors.New("kedudukan_keluarga wajib diisi")
+	}
+
+	kedudukan := normalizeKedudukan(req.KedudukanKeluarga)
+	nomorTelepon := strings.TrimSpace(req.NomorTelepon)
+	if kedudukan == "anak" {
+		if nomorTelepon != "" {
+			if err := validateNomorTeleponIndonesia(nomorTelepon); err != nil {
+				return err
+			}
+		}
+	} else {
+		if nomorTelepon == "" {
+			return errors.New("nomor_telepon wajib diisi")
+		}
+		if err := validateNomorTeleponIndonesia(nomorTelepon); err != nil {
+			return err
+		}
+	}
+
+	if strings.TrimSpace(req.Dusun) == "" {
+		return errors.New("dusun wajib diisi")
+	}
+	if req.TanggalPenambahan == nil {
+		return errors.New("tanggal_penambahan wajib diisi")
+	}
+	if strings.TrimSpace(req.AsalPenduduk) == "" {
+		return errors.New("asal_penduduk wajib diisi")
+	}
+	if strings.TrimSpace(req.Keterangan) == "" {
+		return errors.New("keterangan wajib diisi")
 	}
 
 	return nil
@@ -110,6 +162,10 @@ func (m *Main) AdminCreatePenduduk(actor models.AuthClaims, req models.AdminCrea
 
 	if err := m.repository.CreatePenduduk(entity); err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "duplicate") || strings.Contains(strings.ToLower(err.Error()), "unique") {
+			errMsg := strings.ToLower(err.Error())
+			if strings.Contains(errMsg, "nomor_telepon") {
+				return nil, errors.New("nomor telepon sudah terdaftar")
+			}
 			return nil, errors.New("nik sudah terdaftar")
 		}
 		return nil, err

@@ -14,7 +14,47 @@ func (m *Main) CreatePenduduk(entity *models.Penduduk) error {
 		return errors.New("payload penduduk tidak boleh nil")
 	}
 
-	return m.postgres.Create(entity).Error
+	entity.NIK = strings.TrimSpace(entity.NIK)
+	entity.NomorTelepon = strings.TrimSpace(entity.NomorTelepon)
+
+	if entity.NomorTelepon != "" {
+		return m.postgres.Create(entity).Error
+	}
+
+	var insertedID int64
+	err := m.postgres.Raw(`
+		INSERT INTO penduduk (
+			id_no_kk,
+			nik,
+			nomor_telepon,
+			nama_lengkap,
+			jenis_kelamin,
+			tanggal_lahir,
+			tempat_lahir,
+			golongan_darah,
+			agama,
+			status_perkawinan,
+			pendidikan_terakhir,
+			pekerjaan,
+			baca_huruf,
+			kedudukan_keluarga,
+			dusun,
+			tanggal_penambahan,
+			asal_penduduk,
+			tanggal_pengurangan,
+			tujuan_pindah,
+			tempat_meninggal,
+			keterangan
+		)
+		VALUES (?, NULLIF(?, ''), NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		RETURNING id_penduduk
+	`, entity.IDNoKK, entity.NIK, entity.NomorTelepon, entity.NamaLengkap, entity.JenisKelamin, entity.TanggalLahir, entity.TempatLahir, entity.GolonganDarah, entity.Agama, entity.StatusPerkawinan, entity.PendidikanTerakhir, entity.Pekerjaan, entity.BacaHuruf, entity.KedudukanKeluarga, entity.Dusun, entity.TanggalPenambahan, entity.AsalPenduduk, entity.TanggalPengurangan, entity.TujuanPindah, entity.TempatMeninggal, entity.Keterangan).Scan(&insertedID).Error
+	if err != nil {
+		return err
+	}
+
+	entity.IDPenduduk = insertedID
+	return nil
 }
 
 func (m *Main) GetPendudukByID(idPenduduk int64) (*models.Penduduk, error) {
