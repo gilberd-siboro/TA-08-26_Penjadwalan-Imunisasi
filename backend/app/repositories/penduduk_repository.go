@@ -17,10 +17,6 @@ func (m *Main) CreatePenduduk(entity *models.Penduduk) error {
 	entity.NIK = strings.TrimSpace(entity.NIK)
 	entity.NomorTelepon = strings.TrimSpace(entity.NomorTelepon)
 
-	if entity.NomorTelepon != "" {
-		return m.postgres.Create(entity).Error
-	}
-
 	var insertedID int64
 	err := m.postgres.Raw(`
 		INSERT INTO penduduk (

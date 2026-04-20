@@ -2,12 +2,19 @@
 
 Dokumen ini fokus ke endpoint aktif terbaru. Endpoint lama seperti `/admin/kartu-keluarga`, `/admin/penduduk`, `/admin/pengguna`, `/admin/anak`, `/auth/register`, `/auth/me` tidak dipakai lagi di routing publik.
 
+## Penting Sebelum Tes
+
+Jika payload `anggota` terlalu ringkas (misalnya hanya `nik`, `nomor_telepon`, `nama_lengkap`, `jenis_kelamin`, `kedudukan_keluarga`, `dusun`), maka kolom inti tabel `penduduk` tidak akan lengkap karena request akan ditolak validasi (`400`).
+
+Agar data `penduduk` terisi lengkap, gunakan payload lengkap pada Request 2 di dokumen ini.
+
 ## 1) Endpoint Aktif
 
 1. `POST /login`
-2. `GET /profile/keluarga`
-3. `POST /admin/keluarga-lengkap`
-4. `POST /keluarga/anak`
+2. `POST /logout`
+3. `GET /profile/keluarga`
+4. `POST /admin/keluarga-lengkap`
+5. `POST /keluarga/anak`
 
 ## 2) Target Uji End-to-End
 
@@ -70,6 +77,7 @@ Urutan request di collection:
 3. Login Keluarga
 4. Profile Keluarga
 5. Keluarga Tambah Anak
+6. Logout Keluarga
 
 ## 4.2 Buat Environment
 
@@ -239,6 +247,30 @@ Body contoh:
 }
 ```
 
+Contoh payload ringkas berikut JANGAN dipakai (akan gagal validasi):
+
+```json
+{
+  "no_kk": "1208031340020014",
+  "id_role_pengguna": 2,
+  "nik_pemilik_akun": "1204010101010014",
+  "anggota": [
+    {
+      "nik": "1204010101010015",
+      "nomor_telepon": "081299991110",
+      "nama_lengkap": "Ayah Budi",
+      "jenis_kelamin": "Laki-laki",
+      "kedudukan_keluarga": "Kepala Keluarga",
+      "dusun": "Dusun A"
+    }
+  ]
+}
+```
+
+Alasan gagal:
+1. Field inti `penduduk` belum lengkap (`tanggal_lahir`, `tempat_lahir`, `golongan_darah`, `agama`, `status_perkawinan`, `pendidikan_terakhir`, `pekerjaan`, `baca_huruf`, `tanggal_penambahan`, `asal_penduduk`, `keterangan`).
+2. Backend memvalidasi field tersebut sebagai wajib untuk endpoint admin create keluarga lengkap.
+
 Catatan wajib untuk setiap item `anggota`:
 
 1. Wajib isi field inti penduduk: `nik`, `nama_lengkap`, `jenis_kelamin`, `tanggal_lahir`, `tempat_lahir`, `golongan_darah`, `agama`, `status_perkawinan`, `pendidikan_terakhir`, `pekerjaan`, `baca_huruf`, `kedudukan_keluarga`, `dusun`, `tanggal_penambahan`, `asal_penduduk`, `keterangan`.
@@ -247,6 +279,8 @@ Catatan wajib untuk setiap item `anggota`:
   2. Boleh kosong untuk anggota dengan `kedudukan_keluarga = Anak`.
   3. Jika diisi, wajib format Indonesia: diawali `08`, total 10-12 digit.
 3. `jenis_kelamin` hanya menerima `Laki-laki` atau `Perempuan`.
+4. Field opsional yang boleh kosong: `tanggal_pengurangan`, `tujuan_pindah`, `tempat_meninggal`.
+5. `keterangan` tetap wajib diisi untuk endpoint admin create keluarga lengkap.
 
 Expected:
 
@@ -494,13 +528,39 @@ where no_kk = '{{test_no_kk}}';
 ## 7.2 Verifikasi anggota penduduk
 
 ```sql
-select id_penduduk, id_no_kk, nik, nomor_telepon, nama_lengkap, kedudukan_keluarga
+select
+  id_penduduk,
+  id_no_kk,
+  nik,
+  nomor_telepon,
+  nama_lengkap,
+  jenis_kelamin,
+  tanggal_lahir,
+  tempat_lahir,
+  golongan_darah,
+  agama,
+  status_perkawinan,
+  pendidikan_terakhir,
+  pekerjaan,
+  baca_huruf,
+  kedudukan_keluarga,
+  dusun,
+  tanggal_penambahan,
+  asal_penduduk,
+  tanggal_pengurangan,
+  tujuan_pindah,
+  tempat_meninggal,
+  keterangan
 from public.penduduk
 where id_no_kk = (
   select id_no_kk from public.kartu_keluarga where no_kk = '{{test_no_kk}}'
 )
 order by kedudukan_keluarga, nama_lengkap;
 ```
+
+Target hasil verifikasi kolom:
+1. Untuk data inti (`tanggal_lahir`, `tempat_lahir`, `golongan_darah`, `agama`, `status_perkawinan`, `pendidikan_terakhir`, `pekerjaan`, `baca_huruf`, `tanggal_penambahan`, `asal_penduduk`, `keterangan`) harus terisi.
+2. Untuk kolom opsional (`tanggal_pengurangan`, `tujuan_pindah`, `tempat_meninggal`) boleh `NULL`.
 
 ## 7.3 Verifikasi akun pengguna keluarga
 

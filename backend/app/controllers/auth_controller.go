@@ -43,6 +43,31 @@ func (m *Main) Login(c echo.Context) error {
 	)
 }
 
+func (m *Main) Logout(c echo.Context) error {
+	rawClaims := c.Get("auth_claims")
+	claims, ok := rawClaims.(*models.AuthClaims)
+	if !ok || claims == nil {
+		return helpers.Response(c, http.StatusUnauthorized, []string{"claims token tidak valid"})
+	}
+
+	if err := m.usecases.Logout(*claims); err != nil {
+		errMsg := strings.ToLower(err.Error())
+		if strings.Contains(errMsg, "tidak valid") {
+			return helpers.Response(c, http.StatusBadRequest, []string{err.Error()})
+		}
+
+		return helpers.Response(c, http.StatusInternalServerError, []string{"terjadi kesalahan pada server"})
+	}
+
+	return helpers.StandardResponse(
+		c,
+		http.StatusOK,
+		[]string{"logout berhasil"},
+		nil,
+		nil,
+	)
+}
+
 func (m *Main) ProfileKeluarga(c echo.Context) error {
 	rawClaims := c.Get("auth_claims")
 	claims, ok := rawClaims.(*models.AuthClaims)

@@ -53,6 +53,16 @@ func (m *Main) Login(req models.LoginRequest) (*models.LoginResponse, error) {
 	}, nil
 }
 
+func (m *Main) Logout(actor models.AuthClaims) error {
+	if actor.IDPengguna <= 0 {
+		return errors.New("id_pengguna tidak valid")
+	}
+
+	// JWT saat ini stateless, jadi logout pada sisi backend cukup dianggap valid
+	// setelah token terverifikasi oleh middleware. Frontend tetap perlu hapus token lokal.
+	return nil
+}
+
 func (m *Main) generateAccessToken(idPengguna, idRole int64, idNoKK *int64, roleName, nomorTelepon string) (string, error) {
 	secret := strings.TrimSpace(m.config.JWTSecret)
 	if secret == "" {
