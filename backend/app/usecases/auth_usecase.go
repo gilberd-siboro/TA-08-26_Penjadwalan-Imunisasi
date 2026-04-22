@@ -48,8 +48,9 @@ func (m *Main) Login(req models.LoginRequest) (*models.LoginResponse, error) {
 	}
 
 	return &models.LoginResponse{
-		Token: token,
-		Role:  roleName,
+		Token:               token,
+		Role:                roleName,
+		WajibGantiKataSandi: req.KataSandi == m.generateDefaultPassword(),
 	}, nil
 }
 
@@ -61,6 +62,58 @@ func (m *Main) Logout(actor models.AuthClaims) error {
 	// JWT saat ini stateless, jadi logout pada sisi backend cukup dianggap valid
 	// setelah token terverifikasi oleh middleware. Frontend tetap perlu hapus token lokal.
 	return nil
+}
+
+func (m *Main) ChangePassword(actor models.AuthClaims, req models.ChangePasswordRequest) (*models.ChangePasswordResponse, error) {
+	if actor.IDPengguna <= 0 {
+		return nil, errors.New("id_pengguna tidak valid")
+	}
+
+	req.KataSandiLama = strings.TrimSpace(req.KataSandiLama)
+	req.KataSandiBaru = strings.TrimSpace(req.KataSandiBaru)
+	req.KonfirmasiKataSandiBaru = strings.TrimSpace(req.KonfirmasiKataSandiBaru)
+
+	if req.KataSandiLama == "" || req.KataSandiBaru == "" || req.KonfirmasiKataSandiBaru == "" {
+		return nil, errors.New("kata_sandi_lama, kata_sandi_baru, dan konfirmasi_kata_sandi_baru wajib diisi")
+	}
+	if req.KataSandiBaru != req.KonfirmasiKataSandiBaru {
+		return nil, errors.New("konfirmasi kata sandi baru tidak sama")
+	}
+	if req.KataSandiLama == req.KataSandiBaru {
+		return nil, errors.New("kata sandi baru harus berbeda dari kata sandi lama")
+	}
+	if len(req.KataSandiBaru) < 8 {
+		return nil, errors.New("kata sandi baru minimal 8 karakter")
+	}
+	if req.KataSandiBaru == m.generateDefaultPassword() {
+		return nil, errors.New("kata sandi baru tidak boleh sama dengan kata sandi default")
+	}
+
+	pengguna, err := m.repository.FindPenggunaByID(actor.IDPengguna)
+	if err != nil {
+		if repositories.IsNotFound(err) {
+			return nil, errors.New("pengguna tidak ditemukan")
+		}
+		return nil, err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(pengguna.KataSandi), []byte(req.KataSandiLama)); err != nil {
+		return nil, errors.New("kata sandi lama salah")
+	}
+
+	hashBaru, err := bcrypt.GenerateFromPassword([]byte(req.KataSandiBaru), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := m.repository.UpdateKataSandiPengguna(actor.IDPengguna, string(hashBaru)); err != nil {
+		if repositories.IsNotFound(err) {
+			return nil, errors.New("pengguna tidak ditemukan")
+		}
+		return nil, err
+	}
+
+	return &models.ChangePasswordResponse{IDPengguna: actor.IDPengguna}, nil
 }
 
 func (m *Main) generateAccessToken(idPengguna, idRole int64, idNoKK *int64, roleName, nomorTelepon string) (string, error) {
@@ -198,12 +251,14 @@ func (m *Main) ProfileKeluarga(actor models.AuthClaims) (*models.ProfileKeluarga
 
 	items := make([]models.KeluargaAnggotaResponse, 0, len(anggota))
 	for _, v := range anggota {
+		tanggalLahir := formatTanggalLahir(v.TanggalLahir)
+
 		items = append(items, models.KeluargaAnggotaResponse{
 			IDPenduduk:        v.IDPenduduk,
 			NIK:               v.NIK,
 			NamaLengkap:       v.NamaLengkap,
 			JenisKelamin:      v.JenisKelamin,
-			TanggalLahir:      v.TanggalLahir,
+			TanggalLahir:      tanggalLahir,
 			KedudukanKeluarga: v.KedudukanKeluarga,
 		})
 	}
@@ -219,4 +274,12 @@ func (m *Main) ProfileKeluarga(actor models.AuthClaims) (*models.ProfileKeluarga
 
 func (m *Main) generateDefaultPassword() string {
 	return "huta_mejan123"
+}
+
+func formatTanggalLahir(tanggal *time.Time) string {
+	if tanggal == nil {
+		return ""
+	}
+
+	return tanggal.Format("02-01-2006")
 }

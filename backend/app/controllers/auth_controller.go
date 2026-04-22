@@ -94,3 +94,45 @@ func (m *Main) ProfileKeluarga(c echo.Context) error {
 		nil,
 	)
 }
+
+func (m *Main) ChangePassword(c echo.Context) error {
+	rawClaims := c.Get("auth_claims")
+	claims, ok := rawClaims.(*models.AuthClaims)
+	if !ok || claims == nil {
+		return helpers.Response(c, http.StatusUnauthorized, []string{"claims token tidak valid"})
+	}
+
+	var req models.ChangePasswordRequest
+	if err := c.Bind(&req); err != nil {
+		return helpers.Response(c, http.StatusBadRequest, []string{"format request tidak valid"})
+	}
+
+	result, err := m.usecases.ChangePassword(*claims, req)
+	if err != nil {
+		errMsg := strings.ToLower(err.Error())
+
+		if strings.Contains(errMsg, "wajib diisi") ||
+			strings.Contains(errMsg, "minimal") ||
+			strings.Contains(errMsg, "tidak sama") ||
+			strings.Contains(errMsg, "harus berbeda") ||
+			strings.Contains(errMsg, "tidak boleh") ||
+			strings.Contains(errMsg, "kata sandi lama salah") ||
+			strings.Contains(errMsg, "tidak valid") {
+			return helpers.Response(c, http.StatusBadRequest, []string{err.Error()})
+		}
+
+		if strings.Contains(errMsg, "pengguna tidak ditemukan") {
+			return helpers.Response(c, http.StatusNotFound, []string{err.Error()})
+		}
+
+		return helpers.Response(c, http.StatusInternalServerError, []string{"terjadi kesalahan pada server"})
+	}
+
+	return helpers.StandardResponse(
+		c,
+		http.StatusOK,
+		[]string{"kata sandi berhasil diubah"},
+		result,
+		nil,
+	)
+}

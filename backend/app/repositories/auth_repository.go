@@ -29,6 +29,49 @@ func (m *Main) FindPenggunaByNomorTelepon(nomorTelepon string) (*models.Pengguna
 	return &pengguna, nil
 }
 
+func (m *Main) FindPenggunaByID(idPengguna int64) (*models.Pengguna, error) {
+	if idPengguna <= 0 {
+		return nil, errors.New("id_pengguna tidak valid")
+	}
+
+	var pengguna models.Pengguna
+	err := m.postgres.
+		Model(&models.Pengguna{}).
+		Where(`id_pengguna = ? AND "isDeleted" = ?`, idPengguna, false).
+		First(&pengguna).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &pengguna, nil
+}
+
+func (m *Main) UpdateKataSandiPengguna(idPengguna int64, kataSandiHash string) error {
+	if idPengguna <= 0 {
+		return errors.New("id_pengguna tidak valid")
+	}
+	if strings.TrimSpace(kataSandiHash) == "" {
+		return errors.New("kata_sandi hash tidak valid")
+	}
+
+	now := time.Now()
+	result := m.postgres.
+		Model(&models.Pengguna{}).
+		Where(`id_pengguna = ? AND "isDeleted" = ?`, idPengguna, false).
+		Updates(map[string]interface{}{
+			"kata_sandi": kataSandiHash,
+			"updated_at": &now,
+		})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
+	return nil
+}
+
 func (m *Main) IsPendudukExists(idPenduduk int64) (bool, error) {
 	if idPenduduk <= 0 {
 		return false, errors.New("id_penduduk tidak valid")
@@ -128,7 +171,11 @@ func (m *Main) GetAnggotaKeluargaByKK(idNoKK int64) ([]models.Penduduk, error) {
 	err := m.postgres.
 		Model(&models.Penduduk{}).
 		Where("id_no_kk = ?", idNoKK).
-		Order("kedudukan_keluarga ASC").
+		Order("CASE " +
+			"WHEN kedudukan_keluarga = 'Kepala Keluarga' THEN 1 " +
+			"WHEN kedudukan_keluarga = 'Ibu' THEN 2 " +
+			"WHEN kedudukan_keluarga = 'Anak' THEN 3 " +
+			"ELSE 99 END").
 		Order("nama_lengkap ASC").
 		Find(&anggota).Error
 	if err != nil {

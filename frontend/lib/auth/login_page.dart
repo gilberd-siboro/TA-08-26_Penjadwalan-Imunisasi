@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:frontend/auth/ubah_kata_sandi_page.dart';
+import '../integrasi_backend/inti/jaringan/klien_api.dart';
+import '../integrasi_backend/inti/jaringan/eksepsi_api.dart';
+import '../integrasi_backend/inti/penyimpanan/penyimpanan_sesi.dart';
+import '../integrasi_backend/fitur/autentikasi/data/api_autentikasi.dart';
+import '../screens/home_screen.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -9,8 +15,74 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final _controllerNomorHp = TextEditingController();
+  final _controllerKataSandi = TextEditingController();
+  bool _isLoading = false;
   final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
+
+  String? _validasiNomorHp(String? value) {
+    final v = (value ?? '').trim();
+    if (v.isEmpty) return 'Nomor HP wajib diisi';
+    final regex = RegExp(r'^08[0-9]{8,10}$');
+    if (!regex.hasMatch(v)) return 'Format nomor HP harus 08xxxxxxxxxx';
+    return null;
+  }
+
+  String? _validasiKataSandi(String? value) {
+    if ((value ?? '').trim().isEmpty) return 'Kata sandi wajib diisi';
+    return null;
+  }
+
+  Future<void> _submitLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final api = ApiAutentikasi(KlienApi(), PenyimpananSesi());
+      final hasil = await api.login(
+        nomorTelepon: _controllerNomorHp.text.trim(),
+        kataSandi: _controllerKataSandi.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      if (hasil.wajibGantiKataSandi) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const UbahKataSandiPage(wajibGanti: true),
+          ),
+        );
+        return;
+      }
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    } on EksepsiApi catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.pesan)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Terjadi kesalahan. Coba lagi.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controllerNomorHp.dispose();
+    _controllerKataSandi.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +161,8 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       // Field Nomor HP
                       TextFormField(
+                        controller: _controllerNomorHp,
+                        validator: _validasiNomorHp,
                         keyboardType: TextInputType.number,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
@@ -115,6 +189,8 @@ class _LoginPageState extends State<LoginPage> {
 
                       // Field Password
                       TextFormField(
+                        controller: _controllerKataSandi,
+                        validator: _validasiKataSandi,
                         obscureText: !_isPasswordVisible,
                         decoration: InputDecoration(
                           hintText: "Kata Sandi",
@@ -167,11 +243,7 @@ class _LoginPageState extends State<LoginPage> {
                           ],
                         ),
                         child: ElevatedButton(
-                          onPressed: () {
-                            if (_formKey.currentState!.validate()) {
-                              // Aksi login
-                            }
-                          },
+                          onPressed: _isLoading ? null : _submitLogin,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1A56BE),
                             foregroundColor: Colors.white,
@@ -181,13 +253,22 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             elevation: 0,
                           ),
-                          child: const Text(
-                            "MASUK",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  "MASUK",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
                       ),
 

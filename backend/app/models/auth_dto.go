@@ -1,15 +1,24 @@
 package models
 
-import "time"
-
 type LoginRequest struct {
 	NomorTelepon string `json:"nomor_telepon"`
 	KataSandi    string `json:"kata_sandi"`
 }
 
 type LoginResponse struct {
-	Token string `json:"token"`
-	Role  string `json:"role"`
+	Token               string `json:"token"`
+	Role                string `json:"role"`
+	WajibGantiKataSandi bool   `json:"wajib_ganti_kata_sandi"`
+}
+
+type ChangePasswordRequest struct {
+	KataSandiLama           string `json:"kata_sandi_lama"`
+	KataSandiBaru           string `json:"kata_sandi_baru"`
+	KonfirmasiKataSandiBaru string `json:"konfirmasi_kata_sandi_baru"`
+}
+
+type ChangePasswordResponse struct {
+	IDPengguna int64 `json:"id_pengguna"`
 }
 
 type AdminCreatePenggunaRequest struct {
@@ -28,12 +37,12 @@ type AdminCreatePenggunaResponse struct {
 }
 
 type KeluargaAnggotaResponse struct {
-	IDPenduduk        int64      `json:"id_penduduk"`
-	NIK               string     `json:"nik"`
-	NamaLengkap       string     `json:"nama_lengkap"`
-	JenisKelamin      string     `json:"jenis_kelamin"`
-	TanggalLahir      *time.Time `json:"tanggal_lahir,omitempty"`
-	KedudukanKeluarga string     `json:"kedudukan_keluarga"`
+	IDPenduduk        int64  `json:"id_penduduk"`
+	NIK               string `json:"nik"`
+	NamaLengkap       string `json:"nama_lengkap"`
+	JenisKelamin      string `json:"jenis_kelamin"`
+	TanggalLahir      string `json:"tanggal_lahir,omitempty"`
+	KedudukanKeluarga string `json:"kedudukan_keluarga"`
 }
 
 type ProfileKeluargaResponse struct {

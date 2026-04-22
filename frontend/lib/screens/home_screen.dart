@@ -4,6 +4,14 @@ import '../fitur/hamil/hamil_screen.dart';
 import '../fitur/tumbuh/tumbuh_screen.dart';
 import '../fitur/menyusui/menyusui_screen.dart';
 import '../fitur/nifas/nifas_screen.dart';
+import '../fitur/profil/profil_screen.dart';
+import '../integrasi_backend/inti/jaringan/klien_api.dart';
+import '../integrasi_backend/inti/jaringan/eksepsi_api.dart';
+import '../integrasi_backend/inti/penyimpanan/penyimpanan_sesi.dart';
+import '../integrasi_backend/fitur/autentikasi/data/api_autentikasi.dart';
+import '../integrasi_backend/fitur/keluarga/data/api_keluarga.dart';
+import '../integrasi_backend/fitur/keluarga/model/profil_keluarga.dart';
+import '../auth/login_page.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,6 +21,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  ProfilKeluarga? _profil;
+  bool _loadingProfil = true;
+  bool _loadingTambahAnak = false;
+  String? _errorProfil;
   int _selectedTab = 0; // 0=Hamil, 1=Nifas, 2=Menyusui, 3=Tumbuh
   int _selectedBottomNav = 0;
 
@@ -85,6 +97,123 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _ambilProfil();
+  }
+
+  Future<void> _ambilProfil() async {
+    try {
+      final api = ApiKeluarga(KlienApi());
+      final hasil = await api.ambilProfilKeluarga();
+
+      if (!mounted) return;
+      setState(() {
+        _profil = hasil.data;
+        _errorProfil = null;
+      });
+    } on EksepsiApi catch (e) {
+      if (!mounted) return;
+      setState(() => _errorProfil = e.pesan);
+
+      if (e.statusCode == 401) {
+        await PenyimpananSesi().hapusSesi();
+        if (!mounted) return;
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+          (route) => false,
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _errorProfil = 'Gagal memuat profil keluarga');
+    } finally {
+      if (mounted) setState(() => _loadingProfil = false);
+    }
+  }
+
+  String get _namaTampilan {
+    final anggota = _profil?.anggotaKeluarga ?? [];
+    if (anggota.isEmpty) return 'Pengguna';
+
+    final ibu = anggota.where(
+      (e) => e.kedudukanKeluarga.toLowerCase() == 'ibu',
+    );
+
+    if (ibu.isNotEmpty) return ibu.first.namaLengkap;
+    return anggota.first.namaLengkap;
+  }
+
+  int? get _idIbuAktif {
+    final anggota = _profil?.anggotaKeluarga ?? [];
+    final ibu = anggota.where(
+      (e) => e.kedudukanKeluarga.toLowerCase() == 'ibu',
+    );
+
+    if (ibu.isEmpty) return null;
+    return ibu.first.idPenduduk;
+  }
+
+  Future<void> _logout() async {
+    final api = ApiAutentikasi(KlienApi(), PenyimpananSesi());
+    await api.logout();
+
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _ujiTambahAnak() async {
+    final idIbu = _idIbuAktif;
+    if (idIbu == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Data Ibu tidak ditemukan di profil keluarga.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _loadingTambahAnak = true);
+
+    try {
+      final api = ApiKeluarga(KlienApi());
+      final stempelWaktu = DateTime.now().millisecondsSinceEpoch;
+
+      await api.tambahAnak(
+        idIbu: idIbu,
+        namaLengkap: 'Anak Uji $stempelWaktu',
+        jenisKelamin: 'Laki-laki',
+        tempatLahir: 'Bantul',
+        dusun: 'Dusun Uji',
+        keterangan: 'Uji integrasi dari Home Screen',
+        tanggalLahir: DateTime(2024, 1, 1),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Berhasil tambah anak (data uji).')),
+      );
+    } on EksepsiApi catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal tambah anak: ${e.pesan}')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal tambah anak: error tidak dikenal')),
+      );
+    } finally {
+      if (mounted) setState(() => _loadingTambahAnak = false);
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -108,6 +237,57 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildPanelUjiTambahAnak() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE7EDF4)),
+      ),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              'Tes cepat endpoint tambah anak',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF425466),
+              ),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: (_loadingProfil || _loadingTambahAnak)
+                ? null
+                : _ujiTambahAnak,
+            icon: _loadingTambahAnak
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.person_add_alt_1_rounded, size: 16),
+            label: const Text('Uji POST'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4A9EE0),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              textStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -141,9 +321,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
               const SizedBox(height: 2),
-              const Text(
-                'Halo, Asri!',
-                style: TextStyle(
+              Text(
+                _loadingProfil ? 'Memuat...' : 'Halo, $_namaTampilan!',
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -166,17 +346,20 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.notifications_none_rounded,
-              color: Colors.white,
-              size: 22,
+          GestureDetector(
+            onTap: _logout,
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.logout_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
           ),
         ],
@@ -303,7 +486,16 @@ class _HomeScreenState extends State<HomeScreen> {
             children: List.generate(items.length, (index) {
               final isSelected = _selectedBottomNav == index;
               return GestureDetector(
-                onTap: () => setState(() => _selectedBottomNav = index),
+                onTap: () {
+                  setState(() => _selectedBottomNav = index);
+
+                  if (index == 4) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfilScreen()),
+                    );
+                  }
+                },
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
